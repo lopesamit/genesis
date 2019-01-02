@@ -118,15 +118,15 @@ class App extends Component {
     }
   }
 
-  handleHoverCell(e) {
+  handleHoverCell(rowNo) {
     this.setState({
-      cell: e
+      cell: rowNo
     });
   }
 
-  handleHoverColumn(e) {
+  handleHoverColumn(columnName) {
     this.setState({
-      column: e
+      column: columnName
     });
   }
 
@@ -173,14 +173,14 @@ class App extends Component {
   }
 
   async statistics() {
-    const a = []
-    await this.state.heading.map((h, index) => {
-      this.state.items.map((i, index) => {
-        a.push(i[h])
-
-      });
-    });
-    console.log(a)
+    // const a = []
+    // let b = 0
+    // await this.state.heading.map((h, index) => {
+    //   this.state.items.map((i, index) => {
+    //     a.push( { [h] : i[h] })
+    //     this.setState(byPropKey('stats'+[h], { [h] : i[h] }))
+    //   });
+    // });
   }
 
   render() {
@@ -196,6 +196,7 @@ class App extends Component {
     return (
       <div className="container col-12">
         <div className="jumbotron text-center">
+          {/* <FileReader /> */}
           <InputLabel className="d-block">
             <span className="text-danger"> Current cell row number : </span> {this.state.cell}
           </InputLabel>
@@ -244,6 +245,7 @@ class App extends Component {
                       onMouseOver={e => {
                         this.handleHoverColumn(h);
                       }}
+                      data-toggle="tooltip" title="Click to sort"
                     >
                       {h}
                     </th>
@@ -310,12 +312,12 @@ class App extends Component {
                   </tr>
                 );
               })}
-              <tr>
+              {/* <tr>
                 <td>sum</td>
                 {this.state.heading.map((h, index) => {
                   return <td />;
                 })}
-              </tr>
+              </tr> */}
             </tbody>
           </table>
         </div>
