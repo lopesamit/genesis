@@ -26,7 +26,8 @@ class App extends Component {
       columnClicked: '',
       isPloting: false,
       stats: {},
-      isAsc: false
+      isAsc: false,
+      sumStats: {}
     };
     this.handleSort = this.handleSort.bind(this);
     this.handleHoverCell = this.handleHoverCell.bind(this);
@@ -40,7 +41,7 @@ class App extends Component {
 
   async getData() {
     const items = [];
-    await d3.csv(data, item => {
+    await d3.csv(data, (item) => {      
       items.push(item);
     });
 
@@ -170,17 +171,34 @@ class App extends Component {
     await this.setState({
       filteredItems: filteredItems
     });
+
+    this.statistics()
   }
 
   async statistics() {
-    // const a = []
-    // let b = 0
-    // await this.state.heading.map((h, index) => {
-    //   this.state.items.map((i, index) => {
-    //     a.push( { [h] : i[h] })
-    //     this.setState(byPropKey('stats'+[h], { [h] : i[h] }))
-    //   });
-    // });
+    const a = []
+
+    await this.state.heading.map((h, index) => {
+      this.state.items.map((i, index) => {
+        a.push( { [h] : i[h] })
+      });
+    });
+    
+    let sumStats = { }
+
+    await this.state.heading.forEach((h) => {
+      let temp = a.slice(0, this.state.items.length)
+      let sum = 0
+      temp.forEach((t) => {
+        sum = sum + (t[h] * 1)
+        a.shift()
+      })
+      sumStats = { ...sumStats, [h] : sum}
+    })
+
+    this.setState({sumStats : sumStats})
+
+    console.log(sumStats)
   }
 
   render() {
@@ -312,12 +330,17 @@ class App extends Component {
                   </tr>
                 );
               })}
-              {/* <tr>
+              <tr className="bg-danger">
                 <td>sum</td>
-                {this.state.heading.map((h, index) => {
-                  return <td />;
+                {Object.values(this.state.sumStats).map((s, index) => {
+                  if(!isNaN(s)) {
+                    return <td > {s} </td>;
+                  } else {
+                    return <td> - </td>
+                  }
+
                 })}
-              </tr> */}
+              </tr>
             </tbody>
           </table>
         </div>
