@@ -57,3 +57,9 @@ tr, th, td{
     }
   }
 }
+
+.hignlight-row {
+  &:hover {
+    background-color: aquamarine
+  }
+}

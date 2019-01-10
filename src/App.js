@@ -22,12 +22,14 @@ class App extends Component {
       cell: '',
       column: 'None',
       isFiltering: false,
-      filters: [],
+      filters: {},
       columnClicked: '',
       isPloting: false,
       stats: {},
       isAsc: false,
-      sumStats: {}
+      sumStats: {},
+      meanStats: {},
+      filterObj: {}
     };
     this.handleSort = this.handleSort.bind(this);
     this.handleHoverCell = this.handleHoverCell.bind(this);
@@ -54,14 +56,22 @@ class App extends Component {
   async componentDidMount() {
     await this.getData();
 
-    var heading = [];
+    let heading = [];
     if (this.state.items[0]) {
       heading = Object.keys(this.state.items[0]);
     }
-
+    
     await this.setState({
       heading: heading
     });
+    
+    let filterObj = {}
+    let headings = this.state.heading
+    await headings.map((h) => {
+      filterObj[h] = ''
+    })
+    
+    this.setState({ filterObj : filterObj})
     this.statistics();
   }
 
@@ -119,10 +129,12 @@ class App extends Component {
     }
   }
 
-  handleHoverCell(rowNo) {
+  handleHoverCell(rowNo, e) {
     this.setState({
       cell: rowNo
     });
+
+    // console.log(e)
   }
 
   handleHoverColumn(columnName) {
@@ -158,21 +170,35 @@ class App extends Component {
     this.handleAddGraph();
   }
 
-  async handleFilter(e, column) {
-    let items = this.state.items;
-    if (Object.values(this.state.filters).length > 1) {
-      items = this.state.filteredItems;
+  async handleFilter(filterWord, column, event) {
+    
+    let filterObj = this.state.filterObj
+    filterObj[column] = filterWord
+    
+    await this.setState({ filters: filterObj })
+    
+    let filterState = this.state.filters
+    let filterArray = []
+    for (let key in filterState){
+      if (filterState.hasOwnProperty(key)) {
+        filterArray.push({[key]: filterState[key]})
+      } 
     }
-
-    const filteredItems = items.filter(i => {
-      return i[column].toLowerCase().includes(e);
-    });
-
+    let filteredItems = {}
+    let items = this.state.items;
+    
+    await filterArray.forEach(async (f) =>{
+      filteredItems = items
+      if(f[column]){
+        filteredItems = await items.filter( i => {
+          return i[column].toLowerCase().includes(f[column])
+        })
+      }
+    })
     await this.setState({
       filteredItems: filteredItems
     });
 
-    this.statistics()
   }
 
   async statistics() {
@@ -184,21 +210,22 @@ class App extends Component {
       });
     });
     
-    let sumStats = { }
+    let sumStats = {}
+    let meanStats = {}
 
     await this.state.heading.forEach((h) => {
-      let temp = a.slice(0, this.state.items.length)
+      let arrayLength = this.state.items.length
+      let temp = a.slice(0, arrayLength)
       let sum = 0
       temp.forEach((t) => {
         sum = sum + (t[h] * 1)
         a.shift()
       })
       sumStats = { ...sumStats, [h] : sum}
+      meanStats = { ...meanStats, [h] : Math.round(sum / arrayLength * 100) / 100}
     })
 
-    this.setState({sumStats : sumStats})
-
-    console.log(sumStats)
+    this.setState({sumStats : sumStats, meanStats : meanStats})
   }
 
   render() {
@@ -210,139 +237,158 @@ class App extends Component {
     } else {
       graphComponent = null;
     }
-
     return (
       <div className="container col-12">
         <div className="jumbotron text-center">
-          {/* <FileReader /> */}
-          <InputLabel className="d-block">
-            <span className="text-danger"> Current cell row number : </span> {this.state.cell}
-          </InputLabel>
-          <InputLabel className="d-block">
-            <span className="text-danger"> Current Column : </span> {this.state.column} 
-            <span className="text-danger"> Sorting: </span>{this.state.isSorting ? this.state.isAsc? 'Ascending' : 'Descending' : 'Not Sorting'}
-            <span className="text-danger"> Filter: </span>{this.state.isFiltering ? 'Text Filter' : 'No Filter'}
-          </InputLabel>
-          <Button
-            color="primary"
-            variant="contained"
-            className="m-2"
-            onClick={this.handleAddFilter}
-          >
-            {this.state.isFiltering ? "Remove " : "Add "} filter
-          </Button>
-          <Button
-            color="primary"
-            variant="contained"
-            className="m-2"
-            onClick={this.handleAddGraph}
-          >
-            {this.state.isPloting ? "Remove " : "Add "} Graph
-          </Button>
-          {this.state.isSorting ? (
+          <div className=" bg-white mb-2 rounded">
+            <div className="d-flex col">
+              <div className="d-inline-block mx-auto">
+                <InputLabel className="d-block text-left bg-light p-2 rounded m-2">
+                  <span className="text-danger"> Current cell row number : </span> {this.state.cell}
+                </InputLabel>
+                <InputLabel className="d-block text-left bg-light p-2 rounded m-2">
+                  <span className="text-danger d-block"> Current Column : </span> {this.state.column} 
+                  <span className="text-danger d-block"> Sorting: </span>{this.state.isSorting ? this.state.isAsc? 'Ascending' : 'Descending' : 'Not Sorting'}
+                  <span className="text-danger d-block"> Filter: </span>{this.state.isFiltering ? 'Text Filter' : 'No Filter'}
+                </InputLabel>
+                
+              </div>
+              {graphComponent}
+            </div>
             <Button
-              color="primary"
-              variant="contained"
-              className="m-2"
-              onClick={this.handleRemoveSort}
-            >
-              Remove sorting
-            </Button>
-          ) : null}
-          {graphComponent}
-          <table className="mx-auto text-center data-table">
-            <tbody>
-              <tr className="col-12">
-                <th className="p-2">Row</th>
-                {this.state.heading.map((h, index) => {
-                  return (
-                    <th
-                      className={`p-2 table-heading ${this.state.sortingApplied}`}
-                      key={index}
-                      onClick={e => this.handleSort(h, e)}
-                      onMouseOver={e => {
-                        this.handleHoverColumn(h);
-                      }}
-                      data-toggle="tooltip" title="Click to sort"
-                    >
-                      {h}
-                    </th>
-                  );
-                })}
-              </tr>
-              {this.state.isFiltering ? (
-                <tr>
-                  <td>Filter</td>
+                color={`${this.state.isFiltering ? 'secondary' : 'primary'}`}
+                variant="contained"
+                className="m-2"
+                onClick={this.handleAddFilter}
+              >
+                {this.state.isFiltering ? "Remove " : "Add "} filter
+              </Button>
+              <Button
+                color={`${this.state.isPloting ? 'secondary' : 'primary'}`}
+                variant="contained"
+                className="m-2"
+                onClick={this.handleAddGraph}
+              >
+                {this.state.isPloting ? "Remove " : "Add "} Graph
+              </Button>
+              {this.state.isSorting ? (
+                <Button
+                  color='secondary'
+                  variant="contained"
+                  className="m-2"
+                  onClick={this.handleRemoveSort}
+                >
+                  Remove sorting
+                </Button>
+              ) : null}
+          </div>
+          <div className="bg-white py-3 rounded">
+            <table className="mx-auto text-center data-table">
+              <tbody>
+                <tr className="col-12">
+                  <th className="p-2">Row</th>
                   {this.state.heading.map((h, index) => {
                     return (
-                      <td>
-                        <TextField
-                          className="col"
-                          placeholder="Enter filter"
-                          onChange={e =>
-                            this.handleFilter(e.currentTarget.value, h)
-                          }
-                        />
-                      </td>
+                      <th
+                        className={`p-2 table-heading ${this.state.sortingApplied}`}
+                        key={index}
+                        onClick={e => this.handleSort(h, e)}
+                        onMouseOver={e => {
+                          this.handleHoverColumn(h);
+                        }}
+                        data-toggle="tooltip" title="Click to sort"
+                      >
+                        {h}
+                      </th>
                     );
                   })}
                 </tr>
-              ) : null}
-              {this.state.isPloting ? (
-                <tr>
-                  <td>Plot</td>
-                  {this.state.heading.map((h, index) => {
-                    return (
-                      <td>
-                        {!isNaN(this.state.items[0][h]) ? (
-                          <Button
-                            color="primary"
-                            variant="contained"
-                            onClick={e => this.handlePlotGraph(e, h)}
-                          >
-                            plot
-                          </Button>
-                        ) : null}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ) : null}
-              {this.state[
-                this.state.isFiltering ? "filteredItems" : "items"
-              ].map((item, index) => {
-                var rowNo = index + 1;
-                return (
+                {this.state.isFiltering ? (
                   <tr>
-                    <td>{rowNo}</td>
-                    {Object.values(item).map((i, index) => {
+                    <td>Filter</td>
+                    {this.state.heading.map((h, index) => {
                       return (
-                        <td
-                          key={index}
-                          onMouseOver={e => {
-                            this.handleHoverCell(rowNo);
-                          }}
-                        >
-                          {i}
+                        <td key={index}>
+                          <TextField
+                            className="col"
+                            placeholder="Enter filter"
+                            onChange={e =>
+                              this.handleFilter(e.currentTarget.value, h)
+                            }
+                          />
                         </td>
                       );
                     })}
                   </tr>
-                );
-              })}
-              <tr className="bg-danger">
-                <td>sum</td>
-                {Object.values(this.state.sumStats).map((s, index) => {
-                  if(!isNaN(s)) {
-                    return <td > {s} </td>;
-                  } else {
-                    return <td> - </td>
-                  }
-
+                ) : null}
+                {this.state.isPloting ? (
+                  <tr>
+                    <td>Plot</td>
+                    {this.state.heading.map((h, index) => {
+                      return (
+                        <td key={index}>
+                          {!isNaN(this.state.items[0][h]) ? (
+                            <Button
+                              color="primary"
+                              variant="contained"
+                              onClick={e => this.handlePlotGraph(e, h)}
+                            >
+                              plot
+                            </Button>
+                          ) : null}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ) : null}
+                {/* {this.state[
+                  this.state.isFiltering ? "filteredItems" : "items"
+                ].map((item, index) => { */}
+                {this.state.filteredItems.map((item, index) => {
+                  var rowNo = index + 1;
+                  return (
+                    <tr key={index}>
+                      <td>{rowNo}</td>
+                      {Object.values(item).map((i, index) => {
+                        return (
+                          <td
+                            key={index}
+                            onMouseOver={e => {
+                              this.handleHoverCell(rowNo, index);
+                            }}
+                          >
+                            {i}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
                 })}
-              </tr>
-            </tbody>
-          </table>
+                <tr className="bg-danger">
+                  <td>Sum</td>
+                  {Object.values(this.state.sumStats).map((s, index) => {
+                    if(!isNaN(s)) {
+                      return <td key={index}> {s} </td>;
+                    } else {
+                      return <td key={index}> - </td>
+                    }
+
+                  })}
+                </tr>
+                <tr className="bg-danger">
+                  <td>Mean</td>
+                  {Object.values(this.state.meanStats).map((s, index) => {
+                    if(!isNaN(s)) {
+                      return <td key={index}> {s} </td>;
+                    } else {
+                      return <td key={index}> - </td>
+                    }
+
+                  })}
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     );

@@ -81,12 +81,10 @@ class D3graph extends Component{
   }
 
   render() {
-
-
     return (
-      <div className="d-flex justify-content-center">
-          <div>{this.props.column}</div>
-          <svg className="d-block" width="600" height="180"></svg>
+      <div className="d-inline-block bg-light p-2 rounded my-2 col">
+        {this.props.column}
+        <svg className="d-block" width="600" height="180"></svg>
       </div>
     );
   }
