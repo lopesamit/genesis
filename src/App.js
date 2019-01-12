@@ -149,12 +149,14 @@ class App extends Component {
     });
     this.getData();
   }
+
   handleAddGraph() {
     this.setState(prevState => {
       return { isPloting: !prevState.isPloting };
     });
     this.getData();
   }
+
   handleRemoveSort() {
     this.getData();
     $("th").removeClass("asc desc");
@@ -170,36 +172,39 @@ class App extends Component {
     this.handleAddGraph();
   }
 
-  async handleFilter(filterWord, column, event) {
+  async handleFilter(filterWord, column) {
     
     let filterObj = this.state.filterObj
     filterObj[column] = filterWord
-    
-    await this.setState({ filters: filterObj })
-    
-    let filterState = this.state.filters
+
     let filterArray = []
-    for (let key in filterState){
-      if (filterState.hasOwnProperty(key)) {
-        filterArray.push({[key]: filterState[key]})
-      } 
+    for (let key in filterObj){
+      if (filterObj.hasOwnProperty(key)) {
+        filterArray.push([key, filterObj[key]])
+      }
     }
     let filteredItems = {}
-    let items = this.state.items;
-    
-    await filterArray.forEach(async (f) =>{
-      filteredItems = items
-      if(f[column]){
-        filteredItems = await items.filter( i => {
-          return i[column].toLowerCase().includes(f[column])
-        })
-      }
-    })
+    filteredItems = await this.doFilter(this.state.items,filterArray)
     await this.setState({
       filteredItems: filteredItems
     });
-
   }
+
+  doFilter(items, filterArray) {
+    let filteredItems = { }
+    let obj = []
+    
+    if(filterArray.length > 0) {
+      obj = filterArray.slice(1)
+      filteredItems = items.filter( i => {
+        return i[filterArray[0][0]].toLowerCase().includes(filterArray[0][1])
+      })
+      return this.doFilter(filteredItems, obj)
+    } else {
+      return items
+    }
+  }
+
 
   async statistics() {
     const a = []
@@ -341,9 +346,6 @@ class App extends Component {
                     })}
                   </tr>
                 ) : null}
-                {/* {this.state[
-                  this.state.isFiltering ? "filteredItems" : "items"
-                ].map((item, index) => { */}
                 {this.state.filteredItems.map((item, index) => {
                   var rowNo = index + 1;
                   return (
