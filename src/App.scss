@@ -40,7 +40,7 @@ tr, th, td{
     cursor: pointer;
     font-weight: 500;
     font-size: 14px;
-    background-color: aqua;
+    background-color: cornflowerblue;
     &.asc {
       background-color: whitesmoke;
       &:after {
@@ -55,6 +55,9 @@ tr, th, td{
         font-size: 20px
       }
     }
+  }
+  .table-statistics {
+    background-color: cornflowerblue
   }
 }
 

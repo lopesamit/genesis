@@ -6,6 +6,7 @@ import * as d3 from "d3";
 import $ from "jquery";
 import D3graph from "./components/D3graph";
 import { Button, InputLabel, TextField } from "@material-ui/core";
+import firebase from './firebase'
 
 const byPropKey = (propertyName, value) => () => ({
   [propertyName]: value
@@ -38,12 +39,12 @@ class App extends Component {
     this.handleFilter = this.handleFilter.bind(this);
     this.handleAddGraph = this.handleAddGraph.bind(this);
     this.handleRemoveSort = this.handleRemoveSort.bind(this);
-    // this.handlePlotGraph = this.handlePlotGraph.bind(this)
+    this.handleUpload = this.handleUpload.bind(this)
   }
 
   async getData() {
     const items = [];
-    await d3.csv(data, (item) => {      
+    await d3.csv(data, (item) => {
       items.push(item);
     });
 
@@ -55,7 +56,6 @@ class App extends Component {
 
   async componentDidMount() {
     await this.getData();
-
     let heading = [];
     if (this.state.items[0]) {
       heading = Object.keys(this.state.items[0]);
@@ -64,7 +64,7 @@ class App extends Component {
     await this.setState({
       heading: heading
     });
-    
+
     let filterObj = {}
     let headings = this.state.heading
     await headings.map((h) => {
@@ -133,8 +133,6 @@ class App extends Component {
     this.setState({
       cell: rowNo
     });
-
-    // console.log(e)
   }
 
   handleHoverColumn(columnName) {
@@ -188,6 +186,8 @@ class App extends Component {
     await this.setState({
       filteredItems: filteredItems
     });
+
+    this.statistics()
   }
 
   doFilter(items, filterArray) {
@@ -205,21 +205,36 @@ class App extends Component {
     }
   }
 
+  async handleUpload(){
+    let storage = firebase.storage()
+    let storageRef = storage.ref()
+    let uploadRef = storageRef.child('uploads.csv')
+    
+    let file = document.querySelector('#uploadcsv').files[0]
+
+    if(file.name.includes('.csv')) {
+      uploadRef.put(file).then((snapshot) => {
+        console.log(snapshot)
+      })
+
+    } else {
+      alert('only .csv files supported')
+    }
+  }
 
   async statistics() {
     const a = []
 
     await this.state.heading.map((h, index) => {
-      this.state.items.map((i, index) => {
+      this.state.filteredItems.map((i, index) => {
         a.push( { [h] : i[h] })
       });
     });
-    
     let sumStats = {}
     let meanStats = {}
 
     await this.state.heading.forEach((h) => {
-      let arrayLength = this.state.items.length
+      let arrayLength = this.state.filteredItems.length
       let temp = a.slice(0, arrayLength)
       let sum = 0
       temp.forEach((t) => {
@@ -249,12 +264,12 @@ class App extends Component {
             <div className="d-flex col">
               <div className="d-inline-block mx-auto">
                 <InputLabel className="d-block text-left bg-light p-2 rounded m-2">
-                  <span className="text-danger"> Current cell row number : </span> {this.state.cell}
+                  <span className="text-dark"> Current cell row number : </span> {this.state.cell}
                 </InputLabel>
                 <InputLabel className="d-block text-left bg-light p-2 rounded m-2">
-                  <span className="text-danger d-block"> Current Column : </span> {this.state.column} 
-                  <span className="text-danger d-block"> Sorting: </span>{this.state.isSorting ? this.state.isAsc? 'Ascending' : 'Descending' : 'Not Sorting'}
-                  <span className="text-danger d-block"> Filter: </span>{this.state.isFiltering ? 'Text Filter' : 'No Filter'}
+                  <span className="text-dark d-block"> Current Column : </span> {this.state.column} 
+                  <span className="text-dark d-block"> Sorting: </span>{this.state.isSorting ? this.state.isAsc? 'Ascending' : 'Descending' : 'Not Sorting'}
+                  <span className="text-dark d-block"> Filter: </span>{this.state.isFiltering ? 'Text Filter' : 'No Filter'}
                 </InputLabel>
                 
               </div>
@@ -287,15 +302,17 @@ class App extends Component {
                 </Button>
               ) : null}
           </div>
+          {/* <input id="uploadcsv" type="file" accept=".csv"/>
+          <button onClick={this.handleUpload}> upload </button> */}
           <div className="bg-white py-3 rounded">
             <table className="mx-auto text-center data-table">
               <tbody>
-                <tr className="col-12">
-                  <th className="p-2">Row</th>
+                <tr className="col-12 text-lowercase">
+                  <th className="p-2 table-heading text-capitalize">Row</th>
                   {this.state.heading.map((h, index) => {
                     return (
                       <th
-                        className={`p-2 table-heading ${this.state.sortingApplied}`}
+                        className={`p-2 table-heading text-capitalize ${this.state.sortingApplied}`}
                         key={index}
                         onClick={e => this.handleSort(h, e)}
                         onMouseOver={e => {
@@ -303,7 +320,7 @@ class App extends Component {
                         }}
                         data-toggle="tooltip" title="Click to sort"
                       >
-                        {h}
+                        {h.toLowerCase()}
                       </th>
                     );
                   })}
@@ -366,7 +383,7 @@ class App extends Component {
                     </tr>
                   );
                 })}
-                <tr className="bg-danger">
+                <tr className="table-statistics font-weight-bold">
                   <td>Sum</td>
                   {Object.values(this.state.sumStats).map((s, index) => {
                     if(!isNaN(s)) {
@@ -377,7 +394,7 @@ class App extends Component {
 
                   })}
                 </tr>
-                <tr className="bg-danger">
+                <tr className="table-statistics font-weight-bold">
                   <td>Mean</td>
                   {Object.values(this.state.meanStats).map((s, index) => {
                     if(!isNaN(s)) {
@@ -385,7 +402,6 @@ class App extends Component {
                     } else {
                       return <td key={index}> - </td>
                     }
-
                   })}
                 </tr>
               </tbody>
